@@ -73,6 +73,11 @@ H.264 格式编码器
 或者你可以使用 `libx264 <https://git.videolan.org/?p=x264.git>`_ 编写自己的 格式。
 
 
+`H.264` 数据分析工具: `h264bitstream <https://h264bitstream.sourceforge.io/>`_
+
+在 `macOS` 系统里面可以通过 `brew install h264bitstream` 来安装。
+
+
 术语介绍
 ---------
 

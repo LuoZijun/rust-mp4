@@ -6,15 +6,6 @@ use std::fmt;
 use std::fs::{ self, OpenOptions, File, };
 use std::io::{ Read, Write, Seek, SeekFrom };
 
-
-#![feature(int_to_from_bytes)]
-
-extern crate mp4parse;
-
-use std::fmt;
-use std::fs::{ self, OpenOptions, File, };
-use std::io::{ Read, Write, Seek, SeekFrom };
-
 // A "Frame" called a "Access Unit" (or AU) in h.264 contains 1 more more NALU.
 // The trun encodes each AUs size, this includes all NALUs for that AU.
 // NALUs do not have timestamps, AUs do.
