@@ -3,7 +3,7 @@
 extern crate mp4parse;
 
 use std::fmt;
-use std::fs::{ self, OpenOptions, File, };
+use std::fs::{ self, OpenOptions, };
 use std::io::{ Read, Write, Seek, SeekFrom };
 
 // A "Frame" called a "Access Unit" (or AU) in h.264 contains 1 more more NALU.
