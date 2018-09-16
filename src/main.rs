@@ -309,7 +309,7 @@ fn mp4_samples_to_h264<F: Read + Write + Seek>(mut input_file: F, mut output_fil
 }
 
 fn main() {
-    let input_filepath = "../../rust-ffmpeg/a.mp4";
+    let input_filepath = "a.mp4";
     let output_filepath = "a.h264";
 
     let mut mp4_input_file = fs::File::open(input_filepath).unwrap();
