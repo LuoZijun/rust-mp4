@@ -97,6 +97,7 @@ H.264 格式编码器
 --------
 
 *   `H.264 Specs <http://www.itu.int/rec/T-REC-H.264/en>`_ , Advanced video coding for generic audiovisual services
+*   `Overview of the H.264/AVC Video Coding Standard <http://ip.hhi.de/imagecom_G1/assets/pdfs/csvt_overview_0305.pdf>`_
 *   `StackoverFlow: h264 inside AVI, MP4 and “Raw” h264 streams. Different format of NAL units (or ffmpeg bug) <https://stackoverflow.com/questions/46601724/h264-inside-avi-mp4-and-raw-h264-streams-different-format-of-nal-units-or-f>`_
 *   `Blog: Introduction to H.264: (1) NAL Unit <https://yumichan.net/video-processing/video-compression/introduction-to-h264-nal-unit/>`_
 
