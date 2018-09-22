@@ -283,6 +283,8 @@ fn parse<F: Read>(mut input_file: F) -> Result<Mp4File, mp4parse::Error> {
     })
 }
 
+
+
 fn mp4_samples_to_h264<F: Read + Write + Seek>(mut input_file: F, mut output_file: F, samples: &[Sample]) {
     let mut buffer = Vec::new();
 
@@ -292,12 +294,36 @@ fn mp4_samples_to_h264<F: Read + Write + Seek>(mut input_file: F, mut output_fil
         input_file.seek(SeekFrom::Start(video_sample.offset)).unwrap();
         input_file.read_exact(&mut buffer).unwrap();
 
-        // TODO: 需要检查 `buffer` 中 `Access Unit` 的数据的的排列规则
-        //      *   Annex-B byte stream format
-        //      *   AVCC format
-        output_file.write_all(&mut buffer).unwrap();
+        let mut start: usize = 0usize;
+        loop {
+            if start >= buffer.len() {
+                break;
+            }
+
+            let size = u32::from_be_bytes([
+                buffer[start + 0], buffer[start + 1],
+                buffer[start + 2], buffer[start + 3]
+            ]) as usize;
+
+            start += 4;
+            let end = start + size;
+
+            let au = &buffer[start..end];
+            
+            if au[size-2] == 0 && au[size-1] == 0 {
+                output_file.write(&[0u8, 0, 1]).unwrap();
+                output_file.write_all(&au);
+                output_file.write(&[3]).unwrap();
+            } else {
+                output_file.write(&[0u8, 0, 0, 1]).unwrap();
+                output_file.write_all(&au);
+            }
+
+            start = end;
+        }
     }
 }
+
 
 fn main() {
     let input_filepath = "a.mp4";
