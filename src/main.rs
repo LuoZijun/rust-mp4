@@ -261,6 +261,9 @@ fn parse<F: Read>(mut input_file: F) -> Result<Mp4File, mp4parse::Error> {
             }
         }
 
+        // println!("stss: {:?}", track.stss);
+        // println!("ctts: {:?}", track.ctts);
+        
         tracks.push(Mp4Track {
             id: track.id,
             track_id: track.track_id.unwrap(),
@@ -308,19 +311,77 @@ fn mp4_samples_to_h264<F: Read + Write + Seek>(mut input_file: F, mut output_fil
             start += 4;
             let end = start + size;
 
-            let au = &buffer[start..end];
+            let nalu = &buffer[start..end];
             
-            if au[size-2] == 0 && au[size-1] == 0 {
+            if nalu[size-2] == 0 && nalu[size-1] == 0 {
                 output_file.write(&[0u8, 0, 1]).unwrap();
-                output_file.write_all(&au);
+                output_file.write_all(&nalu);
                 output_file.write(&[3]).unwrap();
             } else {
                 output_file.write(&[0u8, 0, 0, 1]).unwrap();
-                output_file.write_all(&au);
+                output_file.write_all(&nalu);
             }
 
             start = end;
         }
+    }
+}
+
+// AVCC format extradata
+#[derive(Debug)]
+struct AVCVideoConfigurationRecord {
+    version: u8,
+    profile: u8,
+    compatibility: u8,
+    level: u8,
+    // indicates the length in bytes of the length field in an AVC video access unit used indicate the length of each NAL unit. 
+    length_size_minus_one: u8,
+    sps: Vec<Vec<u8>>,
+    pps: Vec<Vec<u8>>,
+}
+
+fn parse_avc_config(data: &[u8]) -> AVCVideoConfigurationRecord {
+    let version = data[0];
+    let avc_profile = data[1];
+    let avc_compatibility = data[2];
+    let avc_level = data[3];
+    let NALULengthSizeMinusOne = data[4] & 0b00000011;
+    let number_of_SPS_NALUs = data[5] & 0b00011111;
+    let mut i: usize = 6;
+
+    let sps_elems = (0..number_of_SPS_NALUs)
+        .map(|_|{
+            let sps_size = u16::from_be_bytes([data[i], data[i+1]]) as usize;
+            i += 2;
+            let sps: Vec<u8> = data[i..i+sps_size].to_vec();
+            i += sps_size;
+            sps
+        })
+        .collect::<Vec<Vec<u8>>>();
+
+    let number_of_PPS_NALUs = data[i];
+    i += 1;
+
+    let pps_elems = (0..number_of_PPS_NALUs)
+        .map(|_|{
+            let pps_size = u16::from_be_bytes([data[i], data[i+1]]) as usize;
+            i += 2;
+            let sps: Vec<u8> = data[i..i+pps_size].to_vec();
+            i += pps_size;
+            sps
+        })
+        .collect::<Vec<Vec<u8>>>();
+
+    assert_eq!(version, 1);
+
+    AVCVideoConfigurationRecord {
+        version,
+        profile: avc_profile,
+        compatibility: avc_compatibility,
+        level: avc_level,
+        length_size_minus_one: NALULengthSizeMinusOne,
+        sps: sps_elems,
+        pps: pps_elems,
     }
 }
 
@@ -341,6 +402,48 @@ fn main() {
 
     for track in &mp4.tracks {
         if track.kind == mp4parse::TrackType::Video {
+            // extradata (sequence header)
+            // https://stackoverflow.com/questions/24884827/possible-locations-for-sequence-picture-parameter-sets-for-h-264-stream/24890903#24890903
+            let (width, height, extradata) = match track.data {
+                mp4parse::SampleEntry::Video(ref video_sample_entry) => {
+                    let width = video_sample_entry.width as usize;
+                    let height = video_sample_entry.height as usize;
+                    let extradata = match video_sample_entry.codec_specific {
+                        mp4parse::VideoCodecSpecific::AVCConfig(ref data) => data,
+                        _ => unreachable!(),
+                    };
+                    (width, height, extradata)
+                },
+                _ => unreachable!()
+            };
+            println!("Video: {} x {}", width, height);
+
+            let avc_config_record = parse_avc_config(&extradata);
+            println!("extradata: {:?}", avc_config_record);
+
+            for sps_nalu in avc_config_record.sps {
+                let size = sps_nalu.len();
+                if sps_nalu[size-2] == 0 && sps_nalu[size-1] == 0 {
+                    h264_output_file.write(&[0u8, 0, 1]).unwrap();
+                    h264_output_file.write_all(&sps_nalu).unwrap();
+                    h264_output_file.write(&[3]).unwrap();
+                } else {
+                    h264_output_file.write(&[0u8, 0, 0, 1]).unwrap();
+                    h264_output_file.write_all(&sps_nalu).unwrap();
+                }
+            }
+            for pps_nalu in avc_config_record.pps {
+                let size = pps_nalu.len();
+                if pps_nalu[size-2] == 0 && pps_nalu[size-1] == 0 {
+                    h264_output_file.write(&[0u8, 0, 1]).unwrap();
+                    h264_output_file.write_all(&pps_nalu).unwrap();
+                    h264_output_file.write(&[3]).unwrap();
+                } else {
+                    h264_output_file.write(&[0u8, 0, 0, 1]).unwrap();
+                    h264_output_file.write_all(&pps_nalu).unwrap();
+                }
+            }
+
             // NOTE: 将 MP4 Video Track Samples 转换为 H264 Byte Stream.
             mp4_samples_to_h264(&mut mp4_input_file, &mut h264_output_file, &track.samples);
         }
