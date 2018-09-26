@@ -6,6 +6,18 @@ MP4
 .. contents::
 
 
+运行样例
+--------------
+
+.. code:: bash
+    
+    git clone https://github.com/LuoZijun/rust-mp4
+    cd rust-mp4
+
+    # 确保当前目录下面有一个文件名为 `a.mp4` 的文件。
+    cargo run --example mp4_to_h264
+
+
 MP4 Track
 --------------
 

@@ -5,7 +5,10 @@ authors = ["luozijun <luozijun.assistant@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+log = "0.4"
 
+[dev-dependencies]
+env_logger = "0.5"
 
 [dependencies.mp4parse]
 git = "https://github.com/mozilla/mp4parse-rust.git"
